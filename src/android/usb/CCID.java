@@ -129,12 +129,15 @@ public class CCID implements Closeable {
 
 
             if (usbEp.getDirection() == UsbConstants.USB_DIR_IN && usbEp.getType() == UsbConstants.USB_ENDPOINT_XFER_INT) {
+                Log.i(TAG, "Found USB Interrupt.");
                 usbInterrupt = usbEp;
             }
             if (usbEp.getDirection() == UsbConstants.USB_DIR_OUT && usbEp.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK) {
+                Log.i(TAG, "Found USB Out.");
                 usbOut = usbEp;
             }
             if (usbEp.getDirection() == UsbConstants.USB_DIR_IN && usbEp.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK) {
+                Log.i(TAG, "Found USB In.");
                 usbIn = usbEp;
             }
         }
@@ -200,18 +203,23 @@ public class CCID implements Closeable {
             }
 
             Log.i(TAG, String.format("CCID interrupt read returned the following status: %x", buffer[1]));
-            if ((buffer[1] & (byte) 0x03) == (byte) 0x02)
+            if ((buffer[1] & (byte) 0x03) == (byte) 0x02) {
+                Log.i(TAG, "Card removed.");
                 callback.removed();
-            else if ((buffer[1] & (byte) 0x03) == (byte) 0x03)
+            } else if ((buffer[1] & (byte) 0x03) == (byte) 0x03) {
+                Log.i(TAG, "Card inserted.");
                 callback.inserted();
+            }
         }
     }
 
     public synchronized byte[] powerOn() throws IOException {
+        Log.i(TAG, "Send power on.");
         return transmit((byte) 0x62/*IccPowerOn*/, null, (byte)0x80/*DataBlock*/, false).data;
     }
 
     public synchronized void powerOff() throws IOException {
+        Log.i(TAG, "Send power off.");
         transmit((byte)0x63/*IccPowerOff*/, null, (byte)0x81/*SlotStatus*/, false);
     }
 
@@ -237,6 +245,7 @@ public class CCID implements Closeable {
     }
 
     public synchronized byte[] transmitApdu(byte[] apdu) throws IOException {
+        Log.i(TAG, "TransmitApdu.");
         return transmit((byte)0x6F /*XfrBlock*/, apdu,(byte)0x80/*DataBlock*/, true).data;
     }
 
@@ -268,7 +277,7 @@ public class CCID implements Closeable {
         sequence = (sequence + 1) % 0xFF;
         byte[] req = new byte[(data == null ? 0 : data.length) + 10];
         req[0] = cmd;
-        req[1] = (byte) (req.length - 10); //(data) length
+        req[1] = (byte) ((req.length - 10) & 0xFF); //(data) length
         req[2] = 0x00; //length, continued (we don't support long lenghts)
         req[3] = 0x00; //length, continued (we don't support long lenghts)
         req[4] = 0x00; //length, continued (we don't support long lenghts)
@@ -286,16 +295,17 @@ public class CCID implements Closeable {
         if (count < 0) {
             throw new IOException("Failed to send data to the CCID reader");
         }
-//        Log.v(TAG, String.format("Sent %d bytes to BULK-OUT: %s", count, Hex.toHexString(req, 0, count)));
+        Log.v(TAG, String.format("Sent %d bytes to BULK-OUT. Data was %d bytes.", count, req[1]));
 
         SlotStatus status;
         byte[] rsp = new byte[271];
         do {
             count = usbConnection.bulkTransfer(usbIn, rsp, rsp.length, 10000);
             if (count < 0) {
-                throw new IOException("Failed to read data from the CCID reader");
+                throw new IOException("Failed to read data from the CCID reader (" + count + ")");
             }
 //            Log.v(TAG, String.format("Read %d bytes from BULK-IN: %s", count, Hex.toHexString(rsp, 0, count)));
+            Log.v(TAG, String.format("Read %d bytes from BULK-IN.", count));
             status = validateResponse(rsp, rtn);
         } while (waitIcc && status != SlotStatus.Active);
 

@@ -53,6 +53,8 @@ public class KUsbNfc extends CordovaPlugin {
     private static final String RES_TYPE_ERROR = "ERROR";
     private static final String RES_ERROR = "Error!!, please try again";
 
+    private static final String TAG = "KNFC";
+
     private UsbManager mManager;
     private PendingIntent mPermissionIntent;
     private UsbDevice device = null;
@@ -121,12 +123,14 @@ public class KUsbNfc extends CordovaPlugin {
     {
         @Override
         public void inserted() {
+            Log.i(TAG, "CardReaderCallback - Card inserted.");
             BuildCardInfoParams params = new BuildCardInfoParams();
             new BuildCardInfoTask().execute(params);
         }
 
         @Override
         public void removed() {
+            Log.i(TAG, "CardReaderCallback - Card removed.");
         }
     }
 
@@ -370,16 +374,22 @@ public class KUsbNfc extends CordovaPlugin {
         protected Void doInBackground(BuildCardInfoParams... params) {
 
             try {
-                byte[] sendBuffer = { (byte) 0xFF, (byte) 0xCA, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+                byte[] sendBuffer = { (byte) 0xFF, (byte) 0xCA, (byte) 0x00, (byte) 0x00, (byte) 0x01 };
+                //byte[] sendBuffer = { (byte) 0xFF, (byte) 0x82, (byte) 0x00, (byte) 0x00, (byte) 0x06, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF };
 
                 byte[] atr = cardReader.powerOn();
+
+                Log.i(TAG, "Sending data (" + sendBuffer.length + ")");
                 byte[] recvBuffer = cardReader.transmitApdu(sendBuffer);
 
                 byte[] trimmed = trimByteArray(recvBuffer);
+
+                Log.i(TAG, "Received data (" + trimmed.length + ")");
                 buildAndSentCardInfo(trimmed, identifyTagType(atr));
 
             } catch (IOException e) {
-                Log.d(":: KRISH ::", e.toString());
+                //Log.d(":: KRISH ::", e.toString());
+                Log.i(TAG, e.toString());
             }
 
             return null;
