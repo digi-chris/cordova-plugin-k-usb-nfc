@@ -9,6 +9,9 @@ export interface KUsbNfc {
         callbackSuccess: (res: NfcDeviceConnectionReponse) => void,
         callbackError: (err: any) => void): void;
 
+    listen(
+        callbackSuccess: (res: any) => void,
+        callbackError: (err: any) => void): void;
 }
 
 export interface NfcDeviceInfo {

@@ -60,6 +60,7 @@ public class KUsbNfc extends CordovaPlugin {
     private UsbDevice device = null;
 
     private CallbackContext rootCallbackContext = null;
+    private CallbackContext listenerCallbackContext = null;
     private Boolean isDeviceAttached = false;
     private Boolean initState = false;
 
@@ -124,12 +125,22 @@ public class KUsbNfc extends CordovaPlugin {
         @Override
         public void inserted() {
             Log.i(TAG, "CardReaderCallback - Card inserted.");
+            if(listenerCallbackContext != null) {
+                PluginResult result = new PluginResult(PluginResult.Status.OK, "Card inserted.");
+                result.setKeepCallback(true);
+                listenerCallbackContext.sendPluginResult(result);
+            }
             BuildCardInfoParams params = new BuildCardInfoParams();
             new BuildCardInfoTask().execute(params);
         }
 
         @Override
         public void removed() {
+            if(listenerCallbackContext != null) {
+                PluginResult result = new PluginResult(PluginResult.Status.ERROR, "Card removed.");
+                result.setKeepCallback(true);
+                listenerCallbackContext.sendPluginResult(result);
+            }
             Log.i(TAG, "CardReaderCallback - Card removed.");
         }
     }
@@ -148,12 +159,18 @@ public class KUsbNfc extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        rootCallbackContext = callbackContext;
+        Log.i(TAG, "Execute: " + action);
         if (action.equals("connect")) {
+            rootCallbackContext = callbackContext;
             init();
             return true;
         } else if (action.equals("disconnect")) {
+            rootCallbackContext = callbackContext;
             closeConnection();
+            return true;
+        } else if (action.equals("listen")) {
+            // TODO: Should check if listening is possible
+            listenerCallbackContext = callbackContext;
             return true;
         }
         return false;

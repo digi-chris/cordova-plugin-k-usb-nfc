@@ -353,6 +353,4 @@ public class CCID implements Closeable {
                 throw new IOException(String.format("Invalid slot status received from the CCID reader: %X", (byte)(rsp[7] & ((byte) 0xC0))));
         }
     }
-
-
 }
